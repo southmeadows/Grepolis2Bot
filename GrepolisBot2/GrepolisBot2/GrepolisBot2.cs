@@ -4110,7 +4110,8 @@ namespace GrepolisBot2
             }
             catch (Exception ex)
             {
-                // ex.ToString();
+                Debug.Print("ERROR " + ex.Message + " t:" + ex.StackTrace);
+         
             }
         }
 
@@ -4212,7 +4213,7 @@ namespace GrepolisBot2
                 dataGridOverviewImages.Rows[0].Cells[x++].Value = Image.FromFile("Overview\\fury_25x25.png");
                 dataGridOverviewImages.Rows[0].Cells[x++].Value = Image.FromFile("Overview\\griffin_25x25.png");
                 dataGridOverviewImages.Rows[0].Cells[x++].Value = Image.FromFile("Overview\\calydonian_boar_25x25.png");
-                dataGridOverviewImages.Rows[0].Cells[x++].Value = Image.FromFile("Overview\\godsent_25x25.png");
+                dataGridOverviewImages.Rows[0].Cells[x++].Value = Image.FromFile("Overview\\sent_25x25.png");
                 x++;
                 dataGridOverviewImages.Rows[0].Cells[x++].Value = Image.FromFile("Overview\\big_transporter_25x25.png");
                 dataGridOverviewImages.Rows[0].Cells[x++].Value = Image.FromFile("Overview\\bireme_25x25.png");
