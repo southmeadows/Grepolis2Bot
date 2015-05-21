@@ -257,9 +257,10 @@ namespace GrepolisBot2
 
         private void initLinkLabel()
         {
-            linkLabelLatestVersion.Text = "Latest version: unknown";
+         /*   linkLabelLatestVersion.Text = "Latest version: unknown";
             linkLabelLatestVersion.Links.Add(0, linkLabelLatestVersion.Text.Length+1, "http://bots.uthar.nl/downloads");
             linkLabelLatestVersion.LinkClicked += new LinkLabelLinkClickedEventHandler(linkLabelLatestVersion_LinkClicked);
+          * */
             linkLabelApikey.Text = "Apikey";
             linkLabelApikey.Links.Add(0, linkLabelApikey.Text.Length, "http://www.9kw.eu/register_2709.html");
             linkLabelApikey.LinkClicked += new LinkLabelLinkClickedEventHandler(linkLabelApikey_LinkClicked);
@@ -539,7 +540,7 @@ namespace GrepolisBot2
                 {
                     CookieHelpers.ClearCookie();
                     m_Controller.State = "loginp1";
-                    webBrowserGrepo.Navigate("http://" + l_Settings.GenMainServer);
+                    webBrowserGrepo.Navigate("https://" + l_Settings.GenMainServer);
                 }
             }
             catch(Exception e)
@@ -603,7 +604,7 @@ namespace GrepolisBot2
                     //2.10 and earlier --> http://zz.grepolis.com/start?action=login
                     //2.11 and later --> http://zz.grepolis.com/start?action=login_to_game_world
 
-                    string l_Url = "http://" + l_Settings.GenMainServer + "/start?action=login_to_game_world";
+                    string l_Url = "https://" + l_Settings.GenMainServer + "/start?action=login_to_game_world";
                     Uri l_Uri = new Uri(l_Url);
                     String l_ServerNr = "";
                     l_ServerNr = l_Settings.GenServer.Substring(0, l_Settings.GenServer.IndexOf(".", 0));
@@ -4110,8 +4111,7 @@ namespace GrepolisBot2
             }
             catch (Exception ex)
             {
-                Debug.Print("ERROR " + ex.Message + " t:" + ex.StackTrace);
-         
+                // ex.ToString();
             }
         }
 
@@ -4213,7 +4213,7 @@ namespace GrepolisBot2
                 dataGridOverviewImages.Rows[0].Cells[x++].Value = Image.FromFile("Overview\\fury_25x25.png");
                 dataGridOverviewImages.Rows[0].Cells[x++].Value = Image.FromFile("Overview\\griffin_25x25.png");
                 dataGridOverviewImages.Rows[0].Cells[x++].Value = Image.FromFile("Overview\\calydonian_boar_25x25.png");
-                dataGridOverviewImages.Rows[0].Cells[x++].Value = Image.FromFile("Overview\\sent_25x25.png");
+                dataGridOverviewImages.Rows[0].Cells[x++].Value = Image.FromFile("Overview\\godsent_25x25.png");
                 x++;
                 dataGridOverviewImages.Rows[0].Cells[x++].Value = Image.FromFile("Overview\\big_transporter_25x25.png");
                 dataGridOverviewImages.Rows[0].Cells[x++].Value = Image.FromFile("Overview\\bireme_25x25.png");
@@ -5738,6 +5738,27 @@ namespace GrepolisBot2
             //Create new thread
             new Thread(new ThreadStart(setGuiToLoggedInStateCrossThread)).Start();
         }
+
+
+        private void btnStartFarmAll_Click(object sender, EventArgs e)
+        {
+            m_Controller.manualStartFarm();
+
+        }
+
+        private void btnStartTrade_Click(object sender, EventArgs e)
+        {
+            m_Controller.manualStartTrade();
+         
+        }
+
+        private void btnGetForum_Click(object sender, EventArgs e)
+        {
+            m_Controller.getForum();
+        }
+
+
+
 
         //~Controller class
         #endregion

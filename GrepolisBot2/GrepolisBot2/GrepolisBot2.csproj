@@ -37,8 +37,7 @@
     <ApplicationIcon>Images\favicon.ico</ApplicationIcon>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="GrepBuildings, Version=2.54.0.2, Culture=neutral, processorArchitecture=x86">
-      <SpecificVersion>False</SpecificVersion>
+    <Reference Include="GrepBuildings">
       <HintPath>..\..\GrepBuildings\GrepBuildings\bin\Release\GrepBuildings.dll</HintPath>
     </Reference>
     <Reference Include="GrepCulture">

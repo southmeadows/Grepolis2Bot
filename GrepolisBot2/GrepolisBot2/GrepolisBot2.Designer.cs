@@ -46,6 +46,8 @@
             this.tabControl1 = new System.Windows.Forms.TabControl();
             this.tabPagePlayer = new System.Windows.Forms.TabPage();
             this.groupBoxFeatureControl = new System.Windows.Forms.GroupBox();
+            this.btnStartFarmAll = new System.Windows.Forms.Button();
+            this.btnStartTrade = new System.Windows.Forms.Button();
             this.checkBoxMTrade = new System.Windows.Forms.CheckBox();
             this.checkBoxMFarmers = new System.Windows.Forms.CheckBox();
             this.checkBoxMCulture = new System.Windows.Forms.CheckBox();
@@ -281,6 +283,7 @@
             this.buttonSelectTownFarmers = new System.Windows.Forms.Button();
             this.comboBoxTownListFarmers = new System.Windows.Forms.ComboBox();
             this.groupBox4 = new System.Windows.Forms.GroupBox();
+            this.buttonSetIntervalAllTownsFarmers = new System.Windows.Forms.Button();
             this.buttonReloadFarmers = new System.Windows.Forms.Button();
             this.numericUpDownFarmerMaxResources = new System.Windows.Forms.NumericUpDown();
             this.labelMaxResources = new System.Windows.Forms.Label();
@@ -527,7 +530,7 @@
             this.colorDialog1 = new System.Windows.Forms.ColorDialog();
             this.toolTip1 = new System.Windows.Forms.ToolTip(this.components);
             this.toolStripStatusLabel2 = new System.Windows.Forms.ToolStripStatusLabel();
-            this.buttonSetIntervalAllTownsFarmers = new System.Windows.Forms.Button();
+            this.btnGetForum = new System.Windows.Forms.Button();
             this.tabControl1.SuspendLayout();
             this.tabPagePlayer.SuspendLayout();
             this.groupBoxFeatureControl.SuspendLayout();
@@ -678,6 +681,8 @@
             // 
             // groupBoxFeatureControl
             // 
+            this.groupBoxFeatureControl.Controls.Add(this.btnStartFarmAll);
+            this.groupBoxFeatureControl.Controls.Add(this.btnStartTrade);
             this.groupBoxFeatureControl.Controls.Add(this.checkBoxMTrade);
             this.groupBoxFeatureControl.Controls.Add(this.checkBoxMFarmers);
             this.groupBoxFeatureControl.Controls.Add(this.checkBoxMCulture);
@@ -690,12 +695,37 @@
             this.groupBoxFeatureControl.TabStop = false;
             this.groupBoxFeatureControl.Text = "Feature Control";
             // 
+            // btnStartFarmAll
+            // 
+            this.btnStartFarmAll.Location = new System.Drawing.Point(86, 78);
+            this.btnStartFarmAll.Name = "btnStartFarmAll";
+            this.btnStartFarmAll.Size = new System.Drawing.Size(92, 23);
+            this.btnStartFarmAll.TabIndex = 5;
+            this.btnStartFarmAll.Text = "Start Farm All";
+            this.toolTip1.SetToolTip(this.btnStartFarmAll, "This will override the normal timers and should only be used\r\nif for some reason " +
+        "you need to kick the farming manually. \r\n\r\nFarming is usually done automatically" +
+        "\r\n");
+            this.btnStartFarmAll.UseVisualStyleBackColor = true;
+            this.btnStartFarmAll.Click += new System.EventHandler(this.btnStartFarmAll_Click);
+            // 
+            // btnStartTrade
+            // 
+            this.btnStartTrade.Location = new System.Drawing.Point(86, 113);
+            this.btnStartTrade.Name = "btnStartTrade";
+            this.btnStartTrade.Size = new System.Drawing.Size(92, 23);
+            this.btnStartTrade.TabIndex = 2;
+            this.btnStartTrade.Text = "Start Trade";
+            this.toolTip1.SetToolTip(this.btnStartTrade, "This overrides the timer and starts the trading manually.\r\n\r\nThis should only be " +
+        "used for speciall situations. \r\n\r\nNormally this is done automatically.\r\n");
+            this.btnStartTrade.UseVisualStyleBackColor = true;
+            this.btnStartTrade.Click += new System.EventHandler(this.btnStartTrade_Click);
+            // 
             // checkBoxMTrade
             // 
             this.checkBoxMTrade.AutoSize = true;
             this.checkBoxMTrade.Checked = true;
             this.checkBoxMTrade.CheckState = System.Windows.Forms.CheckState.Checked;
-            this.checkBoxMTrade.Location = new System.Drawing.Point(6, 100);
+            this.checkBoxMTrade.Location = new System.Drawing.Point(9, 119);
             this.checkBoxMTrade.Name = "checkBoxMTrade";
             this.checkBoxMTrade.Size = new System.Drawing.Size(54, 17);
             this.checkBoxMTrade.TabIndex = 4;
@@ -708,7 +738,7 @@
             this.checkBoxMFarmers.AutoSize = true;
             this.checkBoxMFarmers.Checked = true;
             this.checkBoxMFarmers.CheckState = System.Windows.Forms.CheckState.Checked;
-            this.checkBoxMFarmers.Location = new System.Drawing.Point(6, 75);
+            this.checkBoxMFarmers.Location = new System.Drawing.Point(9, 84);
             this.checkBoxMFarmers.Name = "checkBoxMFarmers";
             this.checkBoxMFarmers.Size = new System.Drawing.Size(63, 17);
             this.checkBoxMFarmers.TabIndex = 3;
@@ -721,7 +751,7 @@
             this.checkBoxMCulture.AutoSize = true;
             this.checkBoxMCulture.Checked = true;
             this.checkBoxMCulture.CheckState = System.Windows.Forms.CheckState.Checked;
-            this.checkBoxMCulture.Location = new System.Drawing.Point(6, 50);
+            this.checkBoxMCulture.Location = new System.Drawing.Point(10, 52);
             this.checkBoxMCulture.Name = "checkBoxMCulture";
             this.checkBoxMCulture.Size = new System.Drawing.Size(59, 17);
             this.checkBoxMCulture.TabIndex = 2;
@@ -734,7 +764,7 @@
             this.checkBoxMBuildingQueue.AutoSize = true;
             this.checkBoxMBuildingQueue.Checked = true;
             this.checkBoxMBuildingQueue.CheckState = System.Windows.Forms.CheckState.Checked;
-            this.checkBoxMBuildingQueue.Location = new System.Drawing.Point(6, 25);
+            this.checkBoxMBuildingQueue.Location = new System.Drawing.Point(9, 22);
             this.checkBoxMBuildingQueue.Name = "checkBoxMBuildingQueue";
             this.checkBoxMBuildingQueue.Size = new System.Drawing.Size(98, 17);
             this.checkBoxMBuildingQueue.TabIndex = 1;
@@ -747,7 +777,7 @@
             this.checkBoxMUnitQueue.AutoSize = true;
             this.checkBoxMUnitQueue.Checked = true;
             this.checkBoxMUnitQueue.CheckState = System.Windows.Forms.CheckState.Checked;
-            this.checkBoxMUnitQueue.Location = new System.Drawing.Point(6, 125);
+            this.checkBoxMUnitQueue.Location = new System.Drawing.Point(9, 150);
             this.checkBoxMUnitQueue.Name = "checkBoxMUnitQueue";
             this.checkBoxMUnitQueue.Size = new System.Drawing.Size(80, 17);
             this.checkBoxMUnitQueue.TabIndex = 0;
@@ -764,6 +794,7 @@
             this.linkLabelLatestVersion.TabIndex = 6;
             this.linkLabelLatestVersion.TabStop = true;
             this.linkLabelLatestVersion.Text = "Latest version: unknown";
+            this.linkLabelLatestVersion.Visible = false;
             // 
             // labelReload
             // 
@@ -933,6 +964,7 @@
             // 
             // groupBoxControls
             // 
+            this.groupBoxControls.Controls.Add(this.btnGetForum);
             this.groupBoxControls.Controls.Add(this.buttonTownPauseResume);
             this.groupBoxControls.Controls.Add(this.buttonLoginMethod1);
             this.groupBoxControls.Location = new System.Drawing.Point(8, 461);
@@ -3182,6 +3214,16 @@
             this.groupBox4.TabIndex = 1;
             this.groupBox4.TabStop = false;
             this.groupBox4.Text = "Config";
+            // 
+            // buttonSetIntervalAllTownsFarmers
+            // 
+            this.buttonSetIntervalAllTownsFarmers.Location = new System.Drawing.Point(150, 89);
+            this.buttonSetIntervalAllTownsFarmers.Name = "buttonSetIntervalAllTownsFarmers";
+            this.buttonSetIntervalAllTownsFarmers.Size = new System.Drawing.Size(38, 23);
+            this.buttonSetIntervalAllTownsFarmers.TabIndex = 68;
+            this.buttonSetIntervalAllTownsFarmers.Text = "All";
+            this.buttonSetIntervalAllTownsFarmers.UseVisualStyleBackColor = true;
+            this.buttonSetIntervalAllTownsFarmers.Click += new System.EventHandler(this.buttonSetIntervalAllTownsFarmers_Click);
             // 
             // buttonReloadFarmers
             // 
@@ -6165,7 +6207,7 @@
             // toolStripStatusLabelGrep
             // 
             this.toolStripStatusLabelGrep.Name = "toolStripStatusLabelGrep";
-            this.toolStripStatusLabelGrep.Size = new System.Drawing.Size(137, 17);
+            this.toolStripStatusLabelGrep.Size = new System.Drawing.Size(126, 17);
             this.toolStripStatusLabelGrep.Text = "toolStripStatusLabelGrep";
             // 
             // toolStripStatusLabel1
@@ -6200,15 +6242,15 @@
             this.toolStripStatusLabel2.Size = new System.Drawing.Size(109, 17);
             this.toolStripStatusLabel2.Text = "toolStripStatusLabel2";
             // 
-            // buttonSetIntervalAllTownsFarmers
+            // btnGetForum
             // 
-            this.buttonSetIntervalAllTownsFarmers.Location = new System.Drawing.Point(150, 89);
-            this.buttonSetIntervalAllTownsFarmers.Name = "buttonSetIntervalAllTownsFarmers";
-            this.buttonSetIntervalAllTownsFarmers.Size = new System.Drawing.Size(38, 23);
-            this.buttonSetIntervalAllTownsFarmers.TabIndex = 68;
-            this.buttonSetIntervalAllTownsFarmers.Text = "All";
-            this.buttonSetIntervalAllTownsFarmers.UseVisualStyleBackColor = true;
-            this.buttonSetIntervalAllTownsFarmers.Click += new System.EventHandler(this.buttonSetIntervalAllTownsFarmers_Click);
+            this.btnGetForum.Location = new System.Drawing.Point(86, 78);
+            this.btnGetForum.Name = "btnGetForum";
+            this.btnGetForum.Size = new System.Drawing.Size(75, 23);
+            this.btnGetForum.TabIndex = 2;
+            this.btnGetForum.Text = "test forum";
+            this.btnGetForum.UseVisualStyleBackColor = true;
+            this.btnGetForum.Click += new System.EventHandler(this.btnGetForum_Click);
             // 
             // GrepolisBot2
             // 
@@ -6857,6 +6899,9 @@
         private System.Windows.Forms.Label labelTransportCapacityComboTxt;
         private System.Windows.Forms.Button buttonFeaturesAllTowns;
         private System.Windows.Forms.Button buttonSetIntervalAllTownsFarmers;
+        private System.Windows.Forms.Button btnStartTrade;
+        private System.Windows.Forms.Button btnStartFarmAll;
+        private System.Windows.Forms.Button btnGetForum;
     }
 }
 

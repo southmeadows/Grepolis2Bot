@@ -11,6 +11,9 @@ using System.Reflection;
 using System.Media;
 using System.Drawing;
 
+
+// while (Browser.Document.GetElementById("divid") == null) { Application.DoEvents(); Thread.Sleep(200); }
+
 namespace GrepolisBot2
 {
     class Controller
@@ -69,7 +72,7 @@ namespace GrepolisBot2
 
         private Timer m_RequestTimer = new Timer();
         private Timer m_RequestTimerCaptcha = new Timer();
-        private Timer m_TimeoutTimer = new Timer();
+        public Timer m_TimeoutTimer = new Timer();
 
         //Custom classes
         private HttpHandler m_HttpHandler = new HttpHandler();
@@ -518,6 +521,32 @@ namespace GrepolisBot2
                 m_TimeoutOnTradeTimer = false;
             }
         }
+
+
+        public void manualStartFarm()
+        {
+            m_RefreshTimer.stop();
+            m_QueueTimer.stop();
+            m_TradeTimer.stop();
+
+            m_CurrentTownIntern = 0;
+
+            attackFarmersAll1();
+        }
+
+        public void manualStartTrade()
+        {
+            m_RefreshTimer.stop();
+            m_QueueTimer.stop();
+            m_TradeTimer.stop();
+
+            m_CurrentTownIntern = 0;
+
+           startTradeSequence();
+
+        }
+
+
 
         /*
          * Pause bot
@@ -1383,7 +1412,7 @@ namespace GrepolisBot2
                 //"type":"backbone"
 
                 NameValueCollection l_Content = new NameValueCollection();
-                string l_Url = "http://" + l_Settings.GenServer + "/game/data?town_id=" + l_Townid + "&action=" + l_Action + "&h=" + m_H;
+                string l_Url = "https://" + l_Settings.GenServer + "/game/data?town_id=" + l_Townid + "&action=" + l_Action + "&h=" + m_H;
                 Uri l_Uri = new Uri(l_Url);
                 //l_Content.Add("json", "{\"types\":[{\"type\":\"buildings\"},{\"type\":\"units\"},{\"type\":\"map\",\"param\":{\"x\":10,\"y\":6}},{\"type\":\"bar\"},{\"type\":\"backbone\"}],\"town_id\":" + l_Townid + ",\"nlreq_id\":" + m_Nlreq_id + "}");
                 l_Content.Add("json", "{\"types\":[{\"type\":\"buildings\"},{\"type\":\"units\"},{\"type\":\"map\",\"param\":{\"x\":10,\"y\":6}},{\"type\":\"bar\"},{\"type\":\"backbone\"}],\"town_id\":" + l_Townid + ",\"nl_init\":false}");//2.80 nlred_id replaced
@@ -2153,7 +2182,7 @@ namespace GrepolisBot2
                     m_State = "switchtown";
                     setStatusBarEvent(m_Player.Towns[m_CurrentTownIntern].Name + ": Switching town");
 
-                    string l_Url = "http://" + l_Settings.GenServer + "/game/index?action=" + l_Action + "&town_id=" + m_Player.Towns[m_CurrentTownIntern].TownID + "&h=" + m_H + "&json=" + l_Json + "&_=" + l_ServerTime;
+                    string l_Url = "https://" + l_Settings.GenServer + "/game/index?action=" + l_Action + "&town_id=" + m_Player.Towns[m_CurrentTownIntern].TownID + "&h=" + m_H + "&json=" + l_Json + "&_=" + l_ServerTime;
                     Uri l_Uri = new Uri(l_Url);
 
                     m_HttpHandler.Headers.Add("X-Requested-With", "XMLHttpRequest");
@@ -2375,6 +2404,297 @@ namespace GrepolisBot2
             }
         }
 
+
+        //////////////////////////////
+
+
+        public void getForum()
+        {
+            IOHandler l_IOHandler = IOHandler.Instance;
+            Settings l_Settings = Settings.Instance;
+
+            string l_Action = "execute";
+
+            try
+            {
+                m_State = "getForum";
+            // https://us41.grepolis.com/game/alliance_forum?town_id=52966&action=forum&h=810c8c4b29c
+                 NameValueCollection l_Content = new NameValueCollection();
+                string l_Url = "https://" + l_Settings.GenServer + "/game/alliance_forum?town_id=" + m_Player.Towns[m_CurrentTownIntern].TownID + "&action=forum&h=" + m_H;
+                Uri l_Uri = new Uri(l_Url);
+
+                 l_Content.Add("json", 	"{\"type\":\"openIndex\",\"separate\":false,\"town_id\":52966,\"nl_init\":true}");
+
+                //json	{"type":"openIndex","separate":false,"town_id":52966,"nl_init":true}
+
+                m_HttpHandler.Headers.Add("X-Requested-With", "XMLHttpRequest");
+                m_HttpHandler.UploadValuesAsync(l_Uri, l_Content);
+                m_HttpHandler.Headers.Remove("X-Requested-With");
+            }
+            catch (Exception e)
+            {
+                startReconnect(0);
+                if (l_Settings.AdvDebugMode)
+                    l_IOHandler.debug("Exception in getForum(): " + e.Message);
+            }
+        }
+
+        /*
+         * Handles the server response of buildingBuildData().
+         */
+        private void forumResponse(string p_Response)
+        {
+            IOHandler l_IOHandler = IOHandler.Instance;
+            Settings l_Settings = Settings.Instance;
+            Parser l_Parser = Parser.Instance;
+
+            try
+            {
+                int l_Index = -1;
+                 string l_Search = "";
+                string l_Error = "";
+            
+                int l_ValidCode = validateResponse(p_Response, "forumResponse");
+
+                if (l_ValidCode == 1)
+                {
+                    if (!p_Response.Contains("{\"error\":\""))
+                    {
+
+                        stateManagerDelay();
+
+                        getForumTab();
+                    }
+                    else
+                    {
+                        if (l_Settings.AdvDebugMode)
+                        {
+                            l_Search = "{\"error\":\"";
+                            l_Index = p_Response.IndexOf(l_Search, 0);
+                            l_Error = p_Response.Substring(l_Index + l_Search.Length, p_Response.IndexOf("\"", l_Index + l_Search.Length) - (l_Index + l_Search.Length));
+                            l_Error = l_Parser.fixSpecialCharacters(l_Error);
+
+                            l_IOHandler.debug("Ingame error in get forum Response(): " + l_Error);
+                        }
+                        stateManagerDelay();
+                    }
+                }
+                else
+                {
+                    processValidatedResponse(l_ValidCode);
+                }
+                m_RetryCountServerError = 0;
+            }
+            catch (Exception e)
+            {
+                setStatusBarEvent("(#" + m_RetryCountServerError + ")Critical error occurred. Server response saved in Response dir.");
+                l_IOHandler.debug("(#" + m_RetryCountServerError + ")Critical error occurred. Server response saved in Response dir.");
+
+                if (l_Settings.AdvDebugMode)
+                    l_IOHandler.saveServerResponse("buildingBuildDataResponse", e.Message + "\n" + p_Response);
+
+                if (m_RetryCountServerError < 1)
+                {
+                    m_RetryCountServerError++;
+                    retryManager();
+                }
+                else
+                {
+                    m_RetryCountServerError = 0;
+                    startReconnect(1);
+                }
+            }
+        }
+        /////////////////////////////////
+
+        public void getForumTab()
+        {
+            IOHandler l_IOHandler = IOHandler.Instance;
+            Settings l_Settings = Settings.Instance;
+
+            string l_Action = "execute";
+
+            try
+            {
+                m_State = "getForumTab";
+                // https://us41.grepolis.com/game/alliance_forum?town_id=52966&action=forum&h=810c8c4b29c
+                NameValueCollection l_Content = new NameValueCollection();
+                string l_Url = "https://" + l_Settings.GenServer + "/game/alliance_forum?town_id=" + m_Player.Towns[m_CurrentTownIntern].TownID + "&action=forum&h=" + m_H;
+                Uri l_Uri = new Uri(l_Url);
+
+                  l_Content.Add("json", 	"{\"type\":\"go\",\"separate\":false,\"forum_id\":\"3744\",\"page\":1,\"town_id\":52966,\"nl_init\":true}");
+
+                //json	{"type":"openIndex","separate":false,"town_id":52966,"nl_init":true}
+
+                m_HttpHandler.Headers.Add("X-Requested-With", "XMLHttpRequest");
+                m_HttpHandler.UploadValuesAsync(l_Uri, l_Content);
+                m_HttpHandler.Headers.Remove("X-Requested-With");
+            }
+            catch (Exception e)
+            {
+                startReconnect(0);
+                if (l_Settings.AdvDebugMode)
+                    l_IOHandler.debug("Exception in getForum(): " + e.Message);
+            }
+        }
+
+        /*
+         * Handles the server response of Changing forum tabs().
+         */
+        private void forumTabResponse(string p_Response)
+        {
+            IOHandler l_IOHandler = IOHandler.Instance;
+            Settings l_Settings = Settings.Instance;
+            Parser l_Parser = Parser.Instance;
+
+            try
+            {
+                int l_Index = -1;
+                int l_IndexEnd = -1;
+                string l_Search = "";
+                string l_Error = "";
+                string l_IsBuildingOrderQueueFull = "";
+
+                string l_Upgradable = "";
+                //string l_UpgradableReduced = "";//Gold spender to build for 25% less resources
+                string l_Teardownable = "";
+                string l_DevName = "";
+                string l_HasMaxLevel = "";
+                int l_DevNameIndex = -1;
+                int l_Level = 0;
+                string l_LevelString = "";
+                int l_NextLevel = 0;
+                int l_TearDownLevel = 0;
+
+                int l_ValidCode = validateResponse(p_Response, "forumResponse");
+
+                if (l_ValidCode == 1)
+                {
+                    if (!p_Response.Contains("{\"error\":\""))
+                    {
+                        l_IndexEnd = p_Response.IndexOf("}}}}\"");
+
+                        // forum_pager\\\"><strong class=\\\"paginator_bg\\\" id=\\\"paginator_selected\\\">1<\\/strong> <\\/div>\\n\\t\\t\\t<div class=\\\"threadlist_container\\
+
+
+                      //  Forum.switchForum(3744,2)
+
+                        l_Search = "Forum.switchForum";
+
+                        l_Index = p_Response.IndexOf(l_Search, 0);
+                      
+                      
+                        l_IsBuildingOrderQueueFull = p_Response.Substring(l_Index + l_Search.Length, p_Response.IndexOf(",", l_Index + l_Search.Length) - (l_Index + l_Search.Length));
+                        m_Player.Towns[m_CurrentTownIntern].IsBuildingOrderQueueFull = l_IsBuildingOrderQueueFull.Equals("true");
+
+                        l_Search = "building_data\\\":";
+                        l_Index = p_Response.IndexOf(l_Search, l_Index) + l_Search.Length;
+
+                        l_Search = "\\\"";
+                        l_Index = p_Response.IndexOf(l_Search, l_Index);
+                        while (l_Index < l_IndexEnd && l_Index != -1)
+                        {
+                            l_DevName = p_Response.Substring(l_Index + l_Search.Length, p_Response.IndexOf("\\", l_Index + l_Search.Length) - (l_Index + l_Search.Length));
+                            l_Search = "can_upgrade\\\":";
+                            l_Index = p_Response.IndexOf(l_Search, l_Index);
+                            l_Upgradable = p_Response.Substring(l_Index + l_Search.Length, p_Response.IndexOf(",", l_Index + l_Search.Length) - (l_Index + l_Search.Length));
+                            l_Search = "can_tear_down\\\":";
+                            l_Index = p_Response.IndexOf(l_Search, l_Index);
+                            l_Teardownable = p_Response.Substring(l_Index + l_Search.Length, p_Response.IndexOf(",", l_Index + l_Search.Length) - (l_Index + l_Search.Length));
+                            l_Search = "has_max_level\\\":";
+                            l_Index = p_Response.IndexOf(l_Search, l_Index);
+                            l_HasMaxLevel = p_Response.Substring(l_Index + l_Search.Length, p_Response.IndexOf(",", l_Index + l_Search.Length) - (l_Index + l_Search.Length));
+                            l_Search = "\\\"level\\\":";
+                            l_Index = p_Response.IndexOf(l_Search, l_Index);
+                            l_LevelString = p_Response.Substring(l_Index + l_Search.Length, p_Response.IndexOf(",", l_Index + l_Search.Length) - (l_Index + l_Search.Length));
+                            if (l_LevelString.Contains("-"))
+                                l_Level = 0;
+                            else
+                                l_Level = int.Parse(l_LevelString);
+                            l_Search = "next_level\\\":";
+                            l_Index = p_Response.IndexOf(l_Search, l_Index);
+                            l_NextLevel = int.Parse(p_Response.Substring(l_Index + l_Search.Length, p_Response.IndexOf(",", l_Index + l_Search.Length) - (l_Index + l_Search.Length)));
+                            l_Search = "tear_down_level\\\":";
+                            l_Index = p_Response.IndexOf(l_Search, l_Index);
+                            l_TearDownLevel = int.Parse(p_Response.Substring(l_Index + l_Search.Length, p_Response.IndexOf(",", l_Index + l_Search.Length) - (l_Index + l_Search.Length)));
+
+                            //Update building
+                            if (!l_DevName.Equals("place"))
+                            {
+                                l_DevNameIndex = m_Player.Towns[m_CurrentTownIntern].getIndexBuilding(l_DevName);
+                                m_Player.Towns[m_CurrentTownIntern].Buildings[l_DevNameIndex].Level = l_Level;
+                                m_Player.Towns[m_CurrentTownIntern].Buildings[l_DevNameIndex].NextLevel = l_NextLevel;
+                                m_Player.Towns[m_CurrentTownIntern].Buildings[l_DevNameIndex].TearDownLevel = l_TearDownLevel;
+                                m_Player.Towns[m_CurrentTownIntern].Buildings[l_DevNameIndex].IsMaxLevel = l_HasMaxLevel.Equals("true");
+                                m_Player.Towns[m_CurrentTownIntern].Buildings[l_DevNameIndex].Upgradable = l_Upgradable.Equals("true");
+                                m_Player.Towns[m_CurrentTownIntern].Buildings[l_DevNameIndex].Teardownable = l_Teardownable.Equals("true");
+                            }
+
+                            //Search Next
+                            //In case of bug/bad performance. Good alternative is: cyle through each building using m_Buildings[i].DevName. By searching the response for the building devname.
+                            l_Search = "group_locked\\\":";
+                            l_Index = p_Response.IndexOf(l_Search, l_Index) + l_Search.Length;
+                            l_Search = "\\\"";
+                            l_Index = p_Response.IndexOf(l_Search, l_Index);
+                        }
+
+                        //Update storage info
+                        //l_DevNameIndex = m_Player.Towns[m_CurrentTownIntern].getIndexBuilding("storage");
+                        //l_Level = m_Player.Towns[m_CurrentTownIntern].Buildings[l_DevNameIndex].Level;
+                        //double l_HideFactor = 100;
+                        //double l_StorageFactor = 200;
+                        //double l_StoragePow = 1.35399;
+                        //m_Player.Towns[m_CurrentTownIntern].Storage = (int)(l_Level * l_HideFactor + Math.Pow(l_Level, l_StoragePow) * l_StorageFactor);
+
+                        //Server time
+                        updateServerTime("_srvtime", p_Response);
+                        addNotifications(p_Response);
+
+                        stateManagerDelay();
+                    }
+                    else
+                    {
+                        if (l_Settings.AdvDebugMode)
+                        {
+                            l_Search = "{\"error\":\"";
+                            l_Index = p_Response.IndexOf(l_Search, 0);
+                            l_Error = p_Response.Substring(l_Index + l_Search.Length, p_Response.IndexOf("\"", l_Index + l_Search.Length) - (l_Index + l_Search.Length));
+                            l_Error = l_Parser.fixSpecialCharacters(l_Error);
+
+                            l_IOHandler.debug("Ingame error in buildingBuildDataResponse(): " + l_Error);
+                        }
+                        stateManagerDelay();
+                    }
+                }
+                else
+                {
+                    processValidatedResponse(l_ValidCode);
+                }
+                m_RetryCountServerError = 0;
+            }
+            catch (Exception e)
+            {
+                setStatusBarEvent("(#" + m_RetryCountServerError + ")Critical error occurred. Server response saved in Response dir.");
+                l_IOHandler.debug("(#" + m_RetryCountServerError + ")Critical error occurred. Server response saved in Response dir.");
+
+                if (l_Settings.AdvDebugMode)
+                    l_IOHandler.saveServerResponse("buildingBuildDataResponse", e.Message + "\n" + p_Response);
+
+                if (m_RetryCountServerError < 1)
+                {
+                    m_RetryCountServerError++;
+                    retryManager();
+                }
+                else
+                {
+                    m_RetryCountServerError = 0;
+                    startReconnect(1);
+                }
+            }
+        }
+
+
+        //////////////////////////////////
         /*
          * This server request is triggered in a real browser when switching towns.
          * It only purpose in this bot --WAS-- to better emulate a real browser.
@@ -2393,7 +2713,7 @@ namespace GrepolisBot2
 
                 //http://***.grepolis.com/game/frontend_bridge?town_id=***&action=execute&h=***
                 NameValueCollection l_Content = new NameValueCollection();
-                string l_Url = "http://" + l_Settings.GenServer + "/game/frontend_bridge?town_id=" + m_Player.Towns[m_CurrentTownIntern].TownID + "&action=" + l_Action + "&h=" + m_H;
+                string l_Url = "https://" + l_Settings.GenServer + "/game/frontend_bridge?town_id=" + m_Player.Towns[m_CurrentTownIntern].TownID + "&action=" + l_Action + "&h=" + m_H;
                 Uri l_Uri = new Uri(l_Url);
                 //l_Content.Add("json", "{\"model_url\":\"BuildingBuildData/" + m_Player.Towns[m_CurrentTownIntern].TownID + "\",\"action_name\":\"forceUpdate\",\"arguments\":null,\"town_id\":" + m_Player.Towns[m_CurrentTownIntern].TownID + ",\"nlreq_id\":" + m_Nlreq_id + "}");
                 l_Content.Add("json", "{\"model_url\":\"BuildingBuildData/" + m_Player.Towns[m_CurrentTownIntern].TownID + "\",\"action_name\":\"forceUpdate\",\"arguments\":null,\"town_id\":" + m_Player.Towns[m_CurrentTownIntern].TownID + ",\"nl_init\":true}");
@@ -2581,7 +2901,7 @@ namespace GrepolisBot2
                 m_State = "locatefarmers";
                 setStatusBarEvent(m_Player.Towns[m_CurrentTownIntern].Name + ": Locating farmers");
                 //http://***.grepolis.com/game/map_data?town_id=***&action=get_chunks&h=***&json=***&_=1424448249018
-                string l_Url = "http://" + l_Settings.GenServer + "/game/map_data?town_id=" + m_Player.Towns[m_CurrentTownIntern].TownID + "&action=" + l_Action + "&h=" + m_H + "&json=" + l_Json + "&_=" + l_ServerTime;
+                string l_Url = "https://" + l_Settings.GenServer + "/game/map_data?town_id=" + m_Player.Towns[m_CurrentTownIntern].TownID + "&action=" + l_Action + "&h=" + m_H + "&json=" + l_Json + "&_=" + l_ServerTime;
                 Uri l_Uri = new Uri(l_Url);
 
                 m_HttpHandler.Headers.Add("X-Requested-With", "XMLHttpRequest");
@@ -2768,7 +3088,7 @@ namespace GrepolisBot2
                 m_State = "updateculturalinfo";
                 setStatusBarEvent(m_Player.Towns[m_CurrentTownIntern].Name + ": Collecting cultural data");
                 //http://***.grepolis.com/game/building_place?town_id=***&action=culture&h=***&json=***&_=***
-                string l_Url = "http://" + l_Settings.GenServer + "/game/building_place?town_id=" + m_Player.Towns[m_CurrentTownIntern].TownID + "&action=" + l_Action + "&h=" + m_H + "&json=" + l_Json + "&_=" + l_ServerTime;
+                string l_Url = "https://" + l_Settings.GenServer + "/game/building_place?town_id=" + m_Player.Towns[m_CurrentTownIntern].TownID + "&action=" + l_Action + "&h=" + m_H + "&json=" + l_Json + "&_=" + l_ServerTime;
                 Uri l_Uri = new Uri(l_Url);
 
                 m_HttpHandler.Headers.Add("X-Requested-With", "XMLHttpRequest");
@@ -3018,7 +3338,7 @@ namespace GrepolisBot2
                         m_CulturalFestivalStarted = true;
                         //http://###.grepolis.com/game/building_place?town_id=###&action=start_celebration&h=###########
                         NameValueCollection l_Content = new NameValueCollection();
-                        string l_Url = "http://" + l_Settings.GenServer + "/game/building_place?town_id=" + m_Player.Towns[m_CurrentTownIntern].TownID + "&action=start_celebration&h=" + m_H;
+                        string l_Url = "https://" + l_Settings.GenServer + "/game/building_place?town_id=" + m_Player.Towns[m_CurrentTownIntern].TownID + "&action=start_celebration&h=" + m_H;
                         Uri l_Uri = new Uri(l_Url);
                         //{"celebration_type":"l_CelebrationType","town_id":"#####","nl_init":true} l_CelebrationType = party/games/triumph/theater
                         l_Content.Add("json", "{\"celebration_type\":\"" + l_CelebrationType + "\",\"town_id\":" + m_Player.Towns[m_CurrentTownIntern].TownID + ",\"nl_init\":true}");
@@ -3153,7 +3473,7 @@ namespace GrepolisBot2
                 m_State = "updatemilitia";
                 setStatusBarEvent(m_Player.Towns[m_CurrentTownIntern].Name + ": Collecting militia data");
 
-                string l_Url = "http://" + l_Settings.GenServer + "/game/building_farm?town_id=" + m_Player.Towns[m_CurrentTownIntern].TownID + "&action=" + l_Action + "&h=" + m_H + "&json=" + l_Json + "&_=" + l_ServerTime;
+                string l_Url = "https://" + l_Settings.GenServer + "/game/building_farm?town_id=" + m_Player.Towns[m_CurrentTownIntern].TownID + "&action=" + l_Action + "&h=" + m_H + "&json=" + l_Json + "&_=" + l_ServerTime;
                 Uri l_Uri = new Uri(l_Url);
 
                 m_HttpHandler.Headers.Add("X-Requested-With", "XMLHttpRequest");
@@ -3255,7 +3575,7 @@ namespace GrepolisBot2
                 {
                     //http://***.grepolis.com/game/building_farm?town_id=***&action=request_militia&h=***
                     NameValueCollection l_Content = new NameValueCollection();
-                    string l_Url = "http://" + l_Settings.GenServer + "/game/building_farm?town_id=" + m_Player.Towns[m_CurrentTownIntern].TownID + "&action=request_militia&h=" + m_H;
+                    string l_Url = "https://" + l_Settings.GenServer + "/game/building_farm?town_id=" + m_Player.Towns[m_CurrentTownIntern].TownID + "&action=request_militia&h=" + m_H;
                     Uri l_Uri = new Uri(l_Url);
                     //l_Content.Add("json", "{\"town_id\":" + m_Player.Towns[m_CurrentTownIntern].TownID + ",\"nlreq_id\":" + m_Nlreq_id + "}");//json={"town_id":"#####","nlreq_id":#####}
                     l_Content.Add("json", "{\"town_id\":" + m_Player.Towns[m_CurrentTownIntern].TownID + ",\"nl_init\":true}");
@@ -3412,7 +3732,7 @@ namespace GrepolisBot2
                                         l_ServerTime = l_ServerTime + "0";
                                 }
 
-                                l_Url = "http://" + l_Settings.GenServer + "/game/farm_town_info?town_id=" + m_Player.Towns[m_CurrentTownIntern].TownID + "&action=" + l_Action + "&h=" + m_H + "&json=" + l_Json + "&_=" + l_ServerTime;
+                                l_Url = "https://" + l_Settings.GenServer + "/game/farm_town_info?town_id=" + m_Player.Towns[m_CurrentTownIntern].TownID + "&action=" + l_Action + "&h=" + m_H + "&json=" + l_Json + "&_=" + l_ServerTime;
                                 Uri l_Uri = new Uri(l_Url);
 
                                 m_HttpHandler.Headers.Add("X-Requested-With", "XMLHttpRequest");
@@ -3588,7 +3908,7 @@ namespace GrepolisBot2
                             l_attackFarmersComplete = false;
 
                             NameValueCollection l_Content = new NameValueCollection();
-                            string l_Url = "http://" + l_Settings.GenServer + "/game/farm_town_info?town_id=" + m_Player.Towns[m_CurrentTownIntern].TownID + "&action=claim_load&h=" + m_H;
+                            string l_Url = "https://" + l_Settings.GenServer + "/game/farm_town_info?town_id=" + m_Player.Towns[m_CurrentTownIntern].TownID + "&action=claim_load&h=" + m_H;
                             Uri l_Uri = new Uri(l_Url);
 
                             if (m_Player.Towns[m_CurrentTownIntern].Farmers[l_CurrentFarmIntern].Mood >= m_Player.Towns[m_CurrentTownIntern].FarmersMinMood && !m_Player.Towns[m_CurrentTownIntern].FarmersFriendlyDemandsOnly)//Check if the type of the loot is non-friendly
@@ -3751,7 +4071,7 @@ namespace GrepolisBot2
         /*
          * Server request to loot or demand farmers using the premium captain feature
          */ 
-        private void attackFarmersAll1()
+        public void attackFarmersAll1()
         {
             IOHandler l_IOHandler = IOHandler.Instance;
             Settings l_Settings = Settings.Instance;
@@ -3792,7 +4112,7 @@ namespace GrepolisBot2
                             {
                                 l_attackFarmersComplete = false;
 
-                                string l_Url = "http://" + l_Settings.GenServer + "/game/farm_town_overviews?town_id=" + m_Player.Towns[m_CurrentTownIntern].TownID + "&action=" + l_Action + "&h=" + m_H + "&json=" + l_Json + "&_=" + l_ServerTime;
+                                string l_Url = "https://" + l_Settings.GenServer + "/game/farm_town_overviews?town_id=" + m_Player.Towns[m_CurrentTownIntern].TownID + "&action=" + l_Action + "&h=" + m_H + "&json=" + l_Json + "&_=" + l_ServerTime;
                                 Uri l_Uri = new Uri(l_Url);
 
                                 m_HttpHandler.Headers.Add("X-Requested-With", "XMLHttpRequest");
@@ -3939,7 +4259,7 @@ namespace GrepolisBot2
                 m_State = "attackfarmersall2";
                 setStatusBarEvent(m_Player.Towns[m_CurrentTownIntern].Name + ": Demanding resources from farmers (2/3)");
                 //http://###.grepolis.com/game/farm_town_overviews?action=get_farm_towns_for_town&town_id=#####&h=###########&json=%7B%22island_x%22%3A###%2C%22island_y%22%3A###%2C%22booty_researched%22%3A1%2C%22trade_office%22%3A0%2C%22town_id%22%3A%22#####%22%2C%22nlreq_id%22%3A0%7D&_=1324843453689
-                string l_Url = "http://" + l_Settings.GenServer + "/game/farm_town_overviews?town_id=" + m_Player.Towns[m_CurrentTownIntern].TownID + "&action=" + l_Action + "&h=" + m_H + "&json=" + l_Json + "&_=" + l_ServerTime;
+                string l_Url = "https://" + l_Settings.GenServer + "/game/farm_town_overviews?town_id=" + m_Player.Towns[m_CurrentTownIntern].TownID + "&action=" + l_Action + "&h=" + m_H + "&json=" + l_Json + "&_=" + l_ServerTime;
                 Uri l_Uri = new Uri(l_Url);
 
                 m_HttpHandler.Headers.Add("X-Requested-With", "XMLHttpRequest");
@@ -4065,7 +4385,7 @@ namespace GrepolisBot2
                 if (!l_FarmTownIds.Equals(""))
                 {
                     NameValueCollection l_Content = new NameValueCollection();
-                    string l_Url = "http://" + l_Settings.GenServer + "/game/farm_town_overviews?town_id=" + l_TownId + "&action=" + l_Action + "&h=" + m_H;
+                    string l_Url = "https://" + l_Settings.GenServer + "/game/farm_town_overviews?town_id=" + l_TownId + "&action=" + l_Action + "&h=" + m_H;
                     Uri l_Uri = new Uri(l_Url);
                     //l_Content.Add("json", "{\"farm_town_ids\":[" + l_FarmTownIds + "],\"time_option\":" + l_TimeOption + ",\"claim_factor\":\"" + l_ClaimFactor + "\",\"current_town_id\":" + l_TownId + ",\"town_id\":\"" + l_TownId + "\",\"nlreq_id\":" + m_Nlreq_id + "}");
                     l_Content.Add("json", "{\"farm_town_ids\":[" + l_FarmTownIds + "],\"time_option\":" + l_TimeOption + ",\"claim_factor\":\"" + l_ClaimFactor + "\",\"current_town_id\":" + l_TownId + ",\"town_id\":" + l_TownId + ",\"nl_init\":true}");
@@ -4341,7 +4661,7 @@ namespace GrepolisBot2
                             setStatusBarEvent(m_Player.Towns[m_CurrentTownIntern].Name + ": Checking building queue");
                             NameValueCollection l_Content = new NameValueCollection();
                             //http://***.grepolis.com/game/frontend_bridge?town_id=***&action=execute&h=***
-                            string l_Url = "http://" + l_Settings.GenServer + "/game/frontend_bridge?town_id=" + m_Player.Towns[m_CurrentTownIntern].TownID + "&action=execute&h=" + m_H;
+                            string l_Url = "https://" + l_Settings.GenServer + "/game/frontend_bridge?town_id=" + m_Player.Towns[m_CurrentTownIntern].TownID + "&action=execute&h=" + m_H;
                             Uri l_Uri = new Uri(l_Url);
                             //l_Content.Add("json", "{\"model_url\":\"BuildingOrder\",\"action_name\":\"buildUp\",\"arguments\":{\"building_id\":\"" + l_Building + "\",\"build_for_gold\":false},\"town_id\":" + m_Player.Towns[m_CurrentTownIntern].TownID + ",\"nlreq_id\":" + m_Nlreq_id + "}");//Building started directly from main interface
                             l_Content.Add("json", "{\"model_url\":\"BuildingOrder\",\"action_name\":\"buildUp\",\"arguments\":{\"building_id\":\"" + l_Building + "\",\"build_for_gold\":false},\"town_id\":" + m_Player.Towns[m_CurrentTownIntern].TownID + ",\"nl_init\":true}");//Building started directly from main interface
@@ -4500,7 +4820,7 @@ namespace GrepolisBot2
                 m_State = "checkbuildingqueuepreteardown";
                 setStatusBarEvent(m_Player.Towns[m_CurrentTownIntern].Name + ": Open demolish tab");
                 //http://***.grepolis.com/game/building_main?town_id=***&action=index&h=***d&json=***&_=***
-                string l_Url = "http://" + l_Settings.GenServer + "/game/building_main?town_id=" + m_Player.Towns[m_CurrentTownIntern].TownID + "&action=" + l_Action + "&h=" + m_H + "&json=" + l_Json + "&_=" + l_ServerTime;
+                string l_Url = "https://" + l_Settings.GenServer + "/game/building_main?town_id=" + m_Player.Towns[m_CurrentTownIntern].TownID + "&action=" + l_Action + "&h=" + m_H + "&json=" + l_Json + "&_=" + l_ServerTime;
                 Uri l_Uri = new Uri(l_Url);
 
                 m_HttpHandler.Headers.Add("X-Requested-With", "XMLHttpRequest");
@@ -4585,7 +4905,7 @@ namespace GrepolisBot2
                     NameValueCollection l_Content = new NameValueCollection();
                     string l_Action = "execute";
                     //http://***.grepolis.com/game/frontend_bridge?town_id=***&action=execute&h=a7eac0b82cd
-                    String l_Url = "http://" + l_Settings.GenServer + "/game/frontend_bridge?town_id=" + m_Player.Towns[m_CurrentTownIntern].TownID + "&action=" + l_Action + "&h=" + m_H;
+                    String l_Url = "https://" + l_Settings.GenServer + "/game/frontend_bridge?town_id=" + m_Player.Towns[m_CurrentTownIntern].TownID + "&action=" + l_Action + "&h=" + m_H;
                     Uri l_Uri = new Uri(l_Url);
                     //l_Content.Add("json", "{\"model_url\":\"BuildingOrder\",\"action_name\":\"tearDown\",\"arguments\":{\"building_id\":\"" + m_BuildingTearDown + "\"},\"town_id\":" + m_Player.Towns[m_CurrentTownIntern].TownID + ",\"nlreq_id\":" + m_Nlreq_id + "}");
                     l_Content.Add("json", "{\"model_url\":\"BuildingOrder\",\"action_name\":\"tearDown\",\"arguments\":{\"building_id\":\"" + m_BuildingTearDown + "\"},\"town_id\":" + m_Player.Towns[m_CurrentTownIntern].TownID + ",\"nl_init\":true}");
@@ -4719,7 +5039,7 @@ namespace GrepolisBot2
                     m_State = "checkprelandarmyqueue";
                     setStatusBarEvent(m_Player.Towns[m_CurrentTownIntern].Name + ": Updating land army data");
 
-                    string l_Url = "http://" + l_Settings.GenServer + "/game/building_barracks?town_id=" + m_Player.Towns[m_CurrentTownIntern].TownID + "&action = " + l_Action + "&h=" + m_H + "&json=" + l_Json + "&_=" + l_ServerTime;
+                    string l_Url = "https://" + l_Settings.GenServer + "/game/building_barracks?town_id=" + m_Player.Towns[m_CurrentTownIntern].TownID + "&action = " + l_Action + "&h=" + m_H + "&json=" + l_Json + "&_=" + l_ServerTime;
                     Uri l_Uri = new Uri(l_Url);
 
                     m_HttpHandler.Headers.Add("X-Requested-With", "XMLHttpRequest");
@@ -4898,7 +5218,7 @@ namespace GrepolisBot2
                             setStatusBarEvent(m_Player.Towns[m_CurrentTownIntern].Name + ": Checking land unit queue");
                             //http://###.grepolis.com/game/building_barracks?action=build&town_id=#####&h=###########
                             NameValueCollection l_Content = new NameValueCollection();
-                            String l_Url = "http://" + l_Settings.GenServer + "/game/building_barracks?town_id=" + m_Player.Towns[m_CurrentTownIntern].TownID + "&action=build&h=" + m_H;
+                            String l_Url = "https://" + l_Settings.GenServer + "/game/building_barracks?town_id=" + m_Player.Towns[m_CurrentTownIntern].TownID + "&action=build&h=" + m_H;
                             Uri l_Uri = new Uri(l_Url);
                             //l_Content.Add("json", "{\"unit_id\":\"" + m_Player.Towns[m_CurrentTownIntern].ArmyUnits[l_UnitIndex].Name + "\",\"amount\":" + l_Amount.ToString() + ",\"town_id\":\"" + m_Player.Towns[m_CurrentTownIntern].TownID + "\",\"nlreq_id\":" + m_Nlreq_id + "}");//json={"unit_id":"archer","amount":#,"town_id":"#####","nlreq_id":##}
                             l_Content.Add("json", "{\"unit_id\":\"" + m_Player.Towns[m_CurrentTownIntern].ArmyUnits[l_UnitIndex].Name + "\",\"amount\":" + l_Amount.ToString() + ",\"town_id\":" + m_Player.Towns[m_CurrentTownIntern].TownID + ",\"nl_init\":true}");
@@ -5042,7 +5362,7 @@ namespace GrepolisBot2
                     m_State = "checkprenavyarmyqueue";
                     setStatusBarEvent(m_Player.Towns[m_CurrentTownIntern].Name + ": Updating navy army data");
 
-                    string l_Url = "http://" + l_Settings.GenServer + "/game/building_docks?town_id=" + m_Player.Towns[m_CurrentTownIntern].TownID + "&action=" + l_Action + "&h=" + m_H + "&json=" + l_Json + "&_=" + l_ServerTime;
+                    string l_Url = "https://" + l_Settings.GenServer + "/game/building_docks?town_id=" + m_Player.Towns[m_CurrentTownIntern].TownID + "&action=" + l_Action + "&h=" + m_H + "&json=" + l_Json + "&_=" + l_ServerTime;
                     Uri l_Uri = new Uri(l_Url);
 
                     m_HttpHandler.Headers.Add("X-Requested-With", "XMLHttpRequest");
@@ -5220,7 +5540,7 @@ namespace GrepolisBot2
                             setStatusBarEvent(m_Player.Towns[m_CurrentTownIntern].Name + ": Checking navy unit queue");
                             //http://###.grepolis.com/game/building_docks?action=build&town_id=#####&h=###########
                             NameValueCollection l_Content = new NameValueCollection();
-                            String l_Url = "http://" + l_Settings.GenServer + "/game/building_docks?town_id=" + m_Player.Towns[m_CurrentTownIntern].TownID + "&action=build&h=" + m_H;
+                            String l_Url = "https://" + l_Settings.GenServer + "/game/building_docks?town_id=" + m_Player.Towns[m_CurrentTownIntern].TownID + "&action=build&h=" + m_H;
                             Uri l_Uri = new Uri(l_Url);
                             //l_Content.Add("json", "{\"unit_id\":\"" + m_Player.Towns[m_CurrentTownIntern].ArmyUnits[l_UnitIndex].Name + "\",\"amount\":" + l_Amount.ToString() + ",\"town_id\":\"" + m_Player.Towns[m_CurrentTownIntern].TownID + "\",\"nlreq_id\":" + m_Nlreq_id + "}");//json={"unit_id":"####","amount":#,"town_id":"###","nlreq_id":###}
                             l_Content.Add("json", "{\"unit_id\":\"" + m_Player.Towns[m_CurrentTownIntern].ArmyUnits[l_UnitIndex].Name + "\",\"amount\":" + l_Amount.ToString() + ",\"town_id\":" + m_Player.Towns[m_CurrentTownIntern].TownID + ",\"nl_init\":true}");
@@ -5436,7 +5756,7 @@ namespace GrepolisBot2
                                     }
 
                                     //http://###.grepolis.com/game/town_info?action=trading&town_id=###&h=###&json=%7B%22id%22%3A%22###%22%2C%22town_id%22%3A%22###%22%2C%22nlreq_id%22%3A0%7D&_=###
-                                    string l_Url = "http://" + l_Settings.GenServer + "/game/town_info?town_id=" + l_Townid + "&action=" + l_Action + "&h=" + m_H + "&json=" + l_Json + "&_=" + l_ServerTime;
+                                    string l_Url = "https://" + l_Settings.GenServer + "/game/town_info?town_id=" + l_Townid + "&action=" + l_Action + "&h=" + m_H + "&json=" + l_Json + "&_=" + l_ServerTime;
                                     Uri l_Uri = new Uri(l_Url);
                                     m_HttpHandler.Headers.Add("X-Requested-With", "XMLHttpRequest");
                                     m_HttpHandler.DownloadStringAsync(l_Uri);
@@ -5686,7 +6006,7 @@ namespace GrepolisBot2
 
                             NameValueCollection l_Content = new NameValueCollection();
                             //http://###.grepolis.com/game/town_info?action=trade&town_id=###&h=###
-                            String l_Url = "http://" + l_Settings.GenServer + "/game/town_info?town_id=" + m_Player.Towns[m_CurrentTownTradeIntern].TownID + "&action=trade&h=" + m_H;
+                            String l_Url = "https://" + l_Settings.GenServer + "/game/town_info?town_id=" + m_Player.Towns[m_CurrentTownTradeIntern].TownID + "&action=trade&h=" + m_H;
                             Uri l_Uri = new Uri(l_Url);
                             //l_Content.Add("json", "{\"id\":" + m_Player.Towns[l_TownsSortedByDistanceIndex].TownID + ",\"wood\":" + l_SendWood.ToString() + ",\"stone\":" + l_SendStone.ToString() + ",\"iron\":" + l_SendIron.ToString() + ",\"town_id\":\"" + m_Player.Towns[m_CurrentTownTradeIntern].TownID + "\",\"nlreq_id\":" + m_Nlreq_id + "}");
                             l_Content.Add("json", "{\"id\":" + m_Player.Towns[l_TownsSortedByDistanceIndex].TownID + ",\"wood\":" + l_SendWood.ToString() + ",\"stone\":" + l_SendStone.ToString() + ",\"iron\":" + l_SendIron.ToString() + ",\"town_id\":" + m_Player.Towns[m_CurrentTownTradeIntern].TownID + ",\"nl_init\":true}");
@@ -5820,7 +6140,7 @@ namespace GrepolisBot2
                     }
 
                     //http://###.grepolis.com/game/frontend_bridge?town_id=###&action=fetch&h=bd1e7e3a580&json=####&_=###
-                    string l_Url = "http://" + l_Settings.GenServer + "/game/frontend_bridge?town_id=" + l_Townid + "&action=fetch&h=" + m_H + "&json=" + l_Json + "&_=" + l_ServerTime;
+                    string l_Url = "https://" + l_Settings.GenServer + "/game/frontend_bridge?town_id=" + l_Townid + "&action=fetch&h=" + m_H + "&json=" + l_Json + "&_=" + l_ServerTime;
                     Uri l_Uri = new Uri(l_Url);
 
                     m_HttpHandler.Headers.Add("X-Requested-With", "XMLHttpRequest");
@@ -5918,7 +6238,7 @@ namespace GrepolisBot2
                 //http://###.grepolis.com/game/frontend_bridge?town_id=###&action=execute&h=###
                 //json={"model_url":"BuildingHide","action_name":"storeIron","arguments":{"iron_to_store":1000},"town_id":117455,"nlreq_id":174854100}
                 NameValueCollection l_Content = new NameValueCollection();
-                string l_Url = "http://" + l_Settings.GenServer + "/game/frontend_bridge?town_id=" + l_TownId + "&action=execute&h=" + m_H;
+                string l_Url = "https://" + l_Settings.GenServer + "/game/frontend_bridge?town_id=" + l_TownId + "&action=execute&h=" + m_H;
                 Uri l_Uri = new Uri(l_Url);
                 //l_Content.Add("json", "{\"model_url\":\"BuildingHide\",\"action_name\":\"storeIron\",\"arguments\":{\"iron_to_store\":" + l_IronToStore.ToString() + "},\"town_id\":" + l_TownId + ",\"nlreq_id\":" + m_Nlreq_id + "}");
                 l_Content.Add("json", "{\"model_url\":\"BuildingHide\",\"action_name\":\"storeIron\",\"arguments\":{\"iron_to_store\":" + l_IronToStore.ToString() + "},\"town_id\":" + l_TownId + ",\"nl_init\":true}");
@@ -6368,7 +6688,7 @@ namespace GrepolisBot2
             try
             {
                 NameValueCollection l_Content = new NameValueCollection();
-                String l_Url = "http://" + l_Settings.GenServer + "/game/bot_check?action=confirm&town_id=" + m_Player.Towns[l_CurrentTownIntern].TownID + "&h=" + m_H;
+                String l_Url = "https://" + l_Settings.GenServer + "/game/bot_check?action=confirm&town_id=" + m_Player.Towns[l_CurrentTownIntern].TownID + "&h=" + m_H;
 
                 if (m_CaptchaType.Equals("math"))
                 {
@@ -6907,6 +7227,15 @@ namespace GrepolisBot2
 
             switch (m_State)
             {
+                case "getForum":
+                    forumResponse(l_Response);
+                    break;
+
+                case "getForumTab":
+                    forumTabResponse(l_Response);
+                    break;
+                        
+                    
                 case "updateGameData":
                     updateGameDataResponse(l_Response);
                     break;
@@ -7295,5 +7624,9 @@ namespace GrepolisBot2
             if (l_Settings.AdvDebugMode)
                 l_IOHandler.debug("Timeout - Server didn't respond for over " + l_Settings.AdvTimeout.ToString() + " seconds. (" + m_State + ")");
         }
+
+
     }
+
+
 }
